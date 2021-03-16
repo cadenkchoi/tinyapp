@@ -50,6 +50,13 @@ app.get("/urls/new", (req, res) => {
   res.render("urls_new");
 });
 
+app.post("/urls/:id", (req, res) => {
+  const nURL = req.body.longURL;
+  const id = req.params.id;
+  urlDatabase[id] = nURL;
+  res.redirect("/urls/")
+});
+
 app.post("/urls/:shortURL/delete", (req, res) => {
   delete urlDatabase[req.params.shortURL];
   res.redirect("/urls/")
