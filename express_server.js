@@ -54,8 +54,8 @@ app.get("/hello", (req, res) => {
 
 app.get("/urls", (req, res) => {
   const templateVars = { urls: urlDatabase, users, user_id: req.cookies["user_id"] };
-  console.log("ooo", users);
-  console.log("pp", req.cookies["user_id"]);
+  // console.log("ooo", users);
+  // console.log("pp", req.cookies["user_id"]);
   res.render("urls_index", templateVars);
 });
 
@@ -86,7 +86,7 @@ app.post("/register", (req, res) => {
 
 app.get("/login/", (req, res) => {
   const templateVars = { urls: urlDatabase, users, user_id: req.cookies["user_id"] };
-  res.render("urls_login")
+  res.render("urls_login", templateVars)
 });
 
 app.post("/login/", (req, res) => {
@@ -96,11 +96,9 @@ app.post("/login/", (req, res) => {
     if (users[keys].email === email && users[keys].password === password) {
       res.cookie("user_id", users[keys].id);
       res.redirect("/urls/");
-      return;
-    } else {
-      res.status(403).send("Email or Password does not match, please try again.")
+      }
     }
-  }
+  res.status(403).send("Email or Password does not match, please try again.");
 });
 
 app.post("/urls", (req, res) => {
