@@ -10,12 +10,10 @@ app.use(bodyParser.urlencoded({extended: true}));
 app.use(cookieParser());
 
 
-
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
 };
-
 
 const users = {
   "userRandomID": {
@@ -95,9 +93,10 @@ app.post("/login/", (req, res) => {
       res.cookie("user_id", users[keys].id);
       res.redirect("/urls/");
       return;
+    } else {
+      res.status(403).send("Email or Password does not match, please try again.")
     }
   }
-  res.send("does not match")
 });
 
 app.post("/urls", (req, res) => {
