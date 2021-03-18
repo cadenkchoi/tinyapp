@@ -10,10 +10,12 @@ app.use(bodyParser.urlencoded({extended: true}));
 app.use(cookieParser());
 
 
+
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
 };
+
 
 const users = {
   "userRandomID": {
@@ -84,7 +86,7 @@ app.post("/register", (req, res) => {
 
 app.get("/login/", (req, res) => {
   const templateVars = { urls: urlDatabase, users, user_id: req.cookies["user_id"] };
-  res.render("urls_login", templateVars)
+  res.render("urls_login")
 });
 
 app.post("/login/", (req, res) => {
