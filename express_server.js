@@ -58,7 +58,8 @@ app.get("/urls", (req, res) => {
 });
 
 app.get("/register", (req, res) => {
-  res.render("urls_register");
+  const templateVars = { urls: urlDatabase, users, user_id: req.cookies["user_id"] };
+  res.render("urls_register", templateVars);
 });
 
 app.post("/register", (req, res) => {
@@ -82,7 +83,8 @@ app.post("/register", (req, res) => {
 });
 
 app.get("/login/", (req, res) => {
-  res.render("urls_login")
+  const templateVars = { urls: urlDatabase, users, user_id: req.cookies["user_id"] };
+  res.render("urls_login", templateVars)
 });
 
 app.post("/login/", (req, res) => {
