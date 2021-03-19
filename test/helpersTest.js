@@ -22,7 +22,7 @@ describe('getUserByEmail', function() {
     assert.equal(user, expectedOutput);
   });
 
-  it('should return a undefined with a non-valid email', function() {
+  it('should return undefined with a non-valid email', function() {
     const user = getUserByEmail("user2222@example.com", testUsers)
     const expectedOutput = undefined;
     assert.equal(user, expectedOutput);

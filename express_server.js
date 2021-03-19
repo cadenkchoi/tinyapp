@@ -18,13 +18,12 @@ const { getUserByEmail, generateRandomString } = require("./helpers.js");
 const urlsForUser = function(userCookie) {
   let urlResult = {};
   for (let key in urlDatabase) {
-    if (urlDatabase[key]["userID"] === userCookie){
+    if (urlDatabase[key]["userID"] === userCookie) {
       urlResult[key] = urlDatabase[key];
-    };
-  };
+    }
+  }
   return urlResult;
 };
-
 
 const urlDatabase = {
   b6UTxQ: { longURL: "https://www.tsn.ca", userID: "aJ48lW" },
@@ -44,18 +43,12 @@ const users = {
   }
 };
 
-
-
 app.get("/", (req, res) => {
-  res.send("Hello!")
+  res.redirect("/urls");
 });
 
 app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
-});
-
-app.get("/hello", (req, res) => {
-  res.send("<html><body>Hello <b>World</b></body></html>\n");
 });
 
 app.get("/urls", (req, res) => {
@@ -86,11 +79,11 @@ app.post("/register", (req, res) => {
     if (users[keys].email === req.body.email) {
       return res.status(400).send("Email already exists");
     }
-  }
-  users[id] = { 
-    id: id, 
-    email: email, 
-    password: bcrypt.hashSync(password, 10) 
+  };
+  users[id] = {
+    id: id,
+    email: email,
+    password: bcrypt.hashSync(password, 10)
   };
   req.session.user_id = id;
   res.redirect("/urls/");
@@ -98,7 +91,12 @@ app.post("/register", (req, res) => {
 
 app.get("/login/", (req, res) => {
   const templateVars = { urls: urlDatabase, users, user_id: req.session.user_id };
-  res.render("urls_login", templateVars)
+  const userID = req.session.user_id;
+  if (userID) {
+    res.redirect("/urls");
+  } else {
+    res.render("urls_login", templateVars);
+  }
 });
 
 app.post("/login/", (req, res) => {
@@ -134,34 +132,50 @@ app.get("/urls/new", (req, res) => {
 
 app.post("/urls/:id", (req, res) => {
   const nURL = req.body.longURL;
-  const id = req.params.id;
-  urlDatabase[id] = { longURL: nURL, userID: id };
-  res.redirect("/urls/")
+  const id = req.session.user_id;
+  if (id === urlDatabase[req.params.id]["userID"]) {
+    urlDatabase[req.params.id] = { longURL: nURL, userID: id };
+    res.redirect("/urls/");
+  } else {
+    res.status(403).send("Donatello says no");
+  }
+
 });
 
 app.post("/urls/:shortURL/delete", (req, res) => {
   const userID = req.session.user_id;
-  const newUser = urlsForUser(userID);
-  const templateVars = { urls: newUser, user_id:userID };
   if (userID && userID === urlDatabase[req.params.shortURL].userID) {
     let shortURL = req.params.shortURL;
     delete urlDatabase[shortURL];
     res.redirect("/urls");
   } else {
-    res.status(403).send("Permission Denied!")
+    res.status(403).send("Permission Denied!");
   }
 });
 
 // page that displays short/long URLs
 app.get("/urls/:shortURL", (req, res) => {
-  const templateVars = { urls: urlDatabase, users, user_id: req.session.user_id, shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL };
-  res.render("urls_show", templateVars);
+  let key = urlDatabase[req.params.shortURL]["userID"];
+  let user = req.session.user_id;
+  if (user !== key) {
+    res.status(403).send("Permission Denied, please log in");
+  } else {
+    const templateVars = { urls: urlDatabase, users, user_id: users[key], shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL };
+    res.render("urls_show", templateVars);
+  }
 });
 
 app.get("/u/:shortURL", (req, res) => {
   const longURL = urlDatabase[req.params.shortURL]["longURL"];
-  res.redirect(longURL);
+  if (longURL) {
+    console.log(req.params.short);
+    res.redirect(longURL.longURL);
+  } else {
+    res.send("The URL does not exist");
+  }
 });
+//   res.redirect(longURL);
+// });
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
@@ -170,10 +184,5 @@ app.listen(PORT, () => {
 app.post("/logout", (req, res) => {
   req.session = null;
   res.redirect("/urls/");
-});
-
-app.get('*', (req, res) => {
-  res.status(404);
-  res.render('404');
 });
 
