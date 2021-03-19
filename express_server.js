@@ -54,11 +54,6 @@ app.get("/urls.json", (req, res) => {
 app.get("/urls", (req, res) => {
   let currentUser = req.session.user_id;
   let newUser = urlsForUser(currentUser);
-  
-  // logs to check if newUser is using url function properly as well as to see if the newly created shortURL is actually passing to the database
-  // console.log("123", newUser);
-  // console.log("345", urlDatabase);
-  
   const templateVars = { urls: newUser, user_id: users[currentUser] };
   res.render("urls_index", templateVars);
 });
@@ -139,7 +134,6 @@ app.post("/urls/:id", (req, res) => {
   } else {
     res.status(403).send("Donatello says no");
   }
-
 });
 
 app.post("/urls/:shortURL/delete", (req, res) => {
@@ -174,8 +168,6 @@ app.get("/u/:shortURL", (req, res) => {
     res.send("The URL does not exist");
   }
 });
-//   res.redirect(longURL);
-// });
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
