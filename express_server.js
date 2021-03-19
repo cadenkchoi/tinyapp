@@ -1,14 +1,29 @@
 const express = require("express");
 const app = express();
 const PORT = 8080;
-const cookieParser = require('cookie-parser')
 const bcrypt = require('bcrypt');
-
+const bodyParser = require("body-parser");
+const cookieSession = require('cookie-session');
 app.set("view engine", "ejs");
 
-const bodyParser = require("body-parser");
+
+app.use(cookieSession({
+  name: 'session',
+  keys: ['key1', 'key2'],
+  maxAge: 24 * 60 * 60 * 1000 // 24 hours
+}));
 app.use(bodyParser.urlencoded({extended: true}));
-app.use(cookieParser());
+const { getUserByEmail, generateRandomString } = require("./helpers.js");
+
+const urlsForUser = function(userCookie) {
+  let urlResult = {};
+  for (let key in urlDatabase) {
+    if (urlDatabase[key]["userID"] === userCookie){
+      urlResult[key] = urlDatabase[key];
+    };
+  };
+  return urlResult;
+};
 
 
 const urlDatabase = {
@@ -29,50 +44,7 @@ const users = {
   }
 };
 
-function generateRandomString(n) {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let newShort = '';
-  for (let i = 0; i < n; i++) {
-    const random = Math.floor(Math.random() * 62);
-   newShort += chars[random];
-  }
-  return newShort;
-};
 
-const urlsForUser = function(userCookie) {
-  let urlResult = {};
-  for (let key in urlDatabase) {
-    if (urlDatabase[key]["userID"] === userCookie){
-      urlResult[key] = urlDatabase[key];
-    }
-  }
-  return urlResult;
-};
-
-const getUserByEmail = function(email, users) {
-  for (const userID in users) {
-    if (email === users[userID].email) {
-      return userID;
-    }
-  }
-  return undefined;
-}
-
-const checkEmail = function(email, users) {
-  const usersKey = Object.keys(users);
-  // console.log(usersKey," <---> ",email);
-  // const getEmail = users.find(emailFound => users[id].email === email);
-  for (let user of usersKey) {
-    // console.log(user, " email = ", users[user].email);
-    if (users[user].email === email) {
-      return true;
-    } else {
-      // console.log('content user[user].email = ', users[user].email);
-      // return false;
-    }
-  }
-  return false;
-};
 
 app.get("/", (req, res) => {
   res.send("Hello!")
@@ -87,8 +59,7 @@ app.get("/hello", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-  // req.session.userid
-  let currentUser = req.cookies["user_id"];
+  let currentUser = req.session.user_id;
   let newUser = urlsForUser(currentUser);
   
   // logs to check if newUser is using url function properly as well as to see if the newly created shortURL is actually passing to the database
@@ -100,7 +71,7 @@ app.get("/urls", (req, res) => {
 });
 
 app.get("/register", (req, res) => {
-  const templateVars = { urls: urlDatabase, users, user_id: req.cookies["user_id"] };
+  const templateVars = { urls: urlDatabase, users, user_id: req.session.user_id };
   res.render("urls_register", templateVars);
 });
 
@@ -121,13 +92,12 @@ app.post("/register", (req, res) => {
     email: email, 
     password: bcrypt.hashSync(password, 10) 
   };
-  console.log(users)
-  res.cookie("user_id", id)
+  req.session.user_id = id;
   res.redirect("/urls/");
 });
 
 app.get("/login/", (req, res) => {
-  const templateVars = { urls: urlDatabase, users, user_id: req.cookies["user_id"] };
+  const templateVars = { urls: urlDatabase, users, user_id: req.session.user_id };
   res.render("urls_login", templateVars)
 });
 
@@ -136,38 +106,29 @@ app.post("/login/", (req, res) => {
   if (!userID) {
     return res.status(403).send(`An account associated with ${req.body.email} does not exist`);
   } else if (bcrypt.compareSync(req.body.password, users[userID].password)) {
-    res.cookie("user_id", userID);
+    req.session.user_id = userID;
     res.redirect("/urls");
     return;
   } else {
     return res.status(403).send("The username or password you entered is incorrect!");
   }
-
-  // const email = req.body.email;
-  // const password = req.body.password;
-  // for (let keys in users) {
-  //   if (users[keys].email === email && users[keys].password === password) {
-  //     res.cookie("user_id", users[keys].id);
-  //     res.redirect("/urls/");
-  //     }
-  //   }
-  // res.status(403).send("Email or Password does not match, please try again.");
 });
 
 app.post("/urls", (req, res) => {
   const shortURL = generateRandomString(6);
   const newURL = req.body.longURL;
-  urlDatabase[shortURL] = { longURL: newURL, userID: req.cookies["user_id"] };
+  urlDatabase[shortURL] = { longURL: newURL, userID: req.session.user_id };
   res.redirect("/urls/" + shortURL);
 });
 
 // if we can't find a cookie to see if logged in, redirect to login page
 app.get("/urls/new", (req, res) => {
-  if (!req.cookies["user_id"]) {
+  let key = req.session.user_id;
+  if (!req.session.user_id) {
     res.redirect("/login");
     return;
   }
-  const templateVars = { urls: urlDatabase, users, user_id: req.cookies["user_id"] };
+  const templateVars = { urls: urlDatabase, user_id: users[key] };
   res.render("urls_new", templateVars);
 });
 
@@ -179,7 +140,7 @@ app.post("/urls/:id", (req, res) => {
 });
 
 app.post("/urls/:shortURL/delete", (req, res) => {
-  const userID = req.cookies["user_id"];
+  const userID = req.session.user_id;
   const newUser = urlsForUser(userID);
   const templateVars = { urls: newUser, user_id:userID };
   if (userID && userID === urlDatabase[req.params.shortURL].userID) {
@@ -193,7 +154,7 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 
 // page that displays short/long URLs
 app.get("/urls/:shortURL", (req, res) => {
-  const templateVars = { urls: urlDatabase, users, user_id: req.cookies["user_id"], shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL };
+  const templateVars = { urls: urlDatabase, users, user_id: req.session.user_id, shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL };
   res.render("urls_show", templateVars);
 });
 
@@ -207,7 +168,7 @@ app.listen(PORT, () => {
 });
 
 app.post("/logout", (req, res) => {
-  res.clearCookie("user_id");
+  req.session = null;
   res.redirect("/urls/");
 });
 
@@ -215,3 +176,4 @@ app.get('*', (req, res) => {
   res.status(404);
   res.render('404');
 });
+
