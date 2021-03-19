@@ -2,6 +2,7 @@ const express = require("express");
 const app = express();
 const PORT = 8080;
 const cookieParser = require('cookie-parser')
+const bcrypt = require('bcrypt');
 
 app.set("view engine", "ejs");
 
@@ -48,6 +49,31 @@ const urlsForUser = function(userCookie) {
   return urlResult;
 };
 
+const getUserByEmail = function(email, users) {
+  for (const userID in users) {
+    if (email === users[userID].email) {
+      return userID;
+    }
+  }
+  return undefined;
+}
+
+const checkEmail = function(email, users) {
+  const usersKey = Object.keys(users);
+  // console.log(usersKey," <---> ",email);
+  // const getEmail = users.find(emailFound => users[id].email === email);
+  for (let user of usersKey) {
+    // console.log(user, " email = ", users[user].email);
+    if (users[user].email === email) {
+      return true;
+    } else {
+      // console.log('content user[user].email = ', users[user].email);
+      // return false;
+    }
+  }
+  return false;
+};
+
 app.get("/", (req, res) => {
   res.send("Hello!")
 });
@@ -82,18 +108,20 @@ app.post("/register", (req, res) => {
   const id = generateRandomString(5);
   const email = req.body.email;
   const password = req.body.password;
-
   if (email === '' || password === '') {
     return res.status(400).send("Error");
   }
-
   for (let keys in users) {
     if (users[keys].email === req.body.email) {
       return res.status(400).send("Email already exists");
     }
   }
- 
-  users[id] = { id, email, password };
+  users[id] = { 
+    id: id, 
+    email: email, 
+    password: bcrypt.hashSync(password, 10) 
+  };
+  console.log(users)
   res.cookie("user_id", id)
   res.redirect("/urls/");
 });
@@ -104,15 +132,26 @@ app.get("/login/", (req, res) => {
 });
 
 app.post("/login/", (req, res) => {
-  const email = req.body.email;
-  const password = req.body.password;
-  for (let keys in users) {
-    if (users[keys].email === email && users[keys].password === password) {
-      res.cookie("user_id", users[keys].id);
-      res.redirect("/urls/");
-      }
-    }
-  res.status(403).send("Email or Password does not match, please try again.");
+  let userID = getUserByEmail(req.body.email, users);
+  if (!userID) {
+    return res.status(403).send(`An account associated with ${req.body.email} does not exist`);
+  } else if (bcrypt.compareSync(req.body.password, users[userID].password)) {
+    res.cookie("user_id", userID);
+    res.redirect("/urls");
+    return;
+  } else {
+    return res.status(403).send("The username or password you entered is incorrect!");
+  }
+
+  // const email = req.body.email;
+  // const password = req.body.password;
+  // for (let keys in users) {
+  //   if (users[keys].email === email && users[keys].password === password) {
+  //     res.cookie("user_id", users[keys].id);
+  //     res.redirect("/urls/");
+  //     }
+  //   }
+  // res.status(403).send("Email or Password does not match, please try again.");
 });
 
 app.post("/urls", (req, res) => {
