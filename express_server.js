@@ -160,13 +160,12 @@ app.get("/urls/:shortURL", (req, res) => {
 });
 
 app.get("/u/:shortURL", (req, res) => {
-  const longURL = urlDatabase[req.params.shortURL]["longURL"];
-  if (longURL) {
-    console.log(req.params.short);
-    res.redirect(longURL.longURL);
-  } else {
-    res.send("The URL does not exist");
+  const shortUrl = urlDatabase[req.params.shortURL]
+  if (!shortUrl) {
+    return res.redirect("/error");
   }
+  const longURL = urlDatabase[req.params.shortURL].longURL;
+  res.redirect(longURL);
 });
 
 app.listen(PORT, () => {
